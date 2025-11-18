@@ -1,0 +1,57 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vault-check"
+version = "1.0.0"
+description = "Production-grade secrets verifier for bot platforms"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [{name = "dhruv13x", email = "dhruv13x@example.com"}]  # Update with yours
+requires-python = ">=3.11"
+keywords = ["vault", "secrets", "env", "cli", "security"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Testing",
+    "Topic :: System :: Systems Administration",
+]
+dependencies = [
+    "aiohttp>=3.8.0",  # Core HTTP client
+    "python-dotenv>=1.0.0",
+    "rich>=13.0.0",
+    "cryptography>=41.0.0",
+]
+
+[project.optional-dependencies]
+aws = ["boto3>=1.26.0"]
+db = [
+    "asyncpg>=0.29.0",
+    "aiosqlite>=0.19.0",
+    "redis[asyncio]>=4.5.0",
+]
+security = ["zxcvbn>=0.0.7"]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=23.0.0",
+    "mypy>=1.5.0",
+    "build",
+    "twine",
+]
+
+[project.scripts]
+vault-check = "vault_check.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/dhruv13x/vault-check"
+Source = "https://github.com/dhruv13x/vault-check"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+[tool.setuptools.packages.find]
+where = ["src"]
