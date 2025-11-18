@@ -45,7 +45,7 @@ dev = [
 ]
 
 [project.scripts]
-vault-check = "vault_check.cli:main"
+vault-check = "vault_check.cli:main_sync"
 
 [project.urls]
 Homepage = "https://github.com/dhruv13x/vault-check"
