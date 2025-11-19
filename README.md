@@ -184,6 +184,33 @@ Fork, add verifiers (inherit `BaseVerifier`), and PR with tests (pytest-asyncio)
    # Integrate in main() checks
    ```
 
+## Testing
+
+To run the integration and end-to-end tests, you will need to create a `.env` file in the `tests/integration` and `tests/e2e` directories.
+
+**`tests/integration/test.env`:**
+```
+SESSION_ENCRYPTION_KEY=y_s3V1e_fJ7N4X-g9hQbRzLwP6K2aI5cE1tD8UvYj0o=
+JWT_SECRET=super-secret-jwt-key-that-is-long-enough
+JWT_EXPIRATION_MINUTES=60
+CORE_PLATFORM_DB_URL=sqlite:///test.db
+HEAVY_WORKER_REDIS_URL=redis://localhost:6379
+API_ID=12345
+API_HASH=a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4
+OWNER_TELEGRAM_ID=123456789
+FORWARDER_BOT_TOKEN=123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11
+ACCOUNTS_API_URL=https://example.com
+ACCOUNTS_API_KEY=test-key
+BASE_WEBHOOK_URL=https://example.com
+WEBHOOK_SECRET_TOKEN=secret-token
+```
+
+**`tests/e2e/e2e.env`:**
+```
+CORE_PLATFORM_DB_URL=postgresql://user:password@localhost:5432/testdb
+HEAVY_WORKER_REDIS_URL=redis://localhost:6379
+```
+
 See [CONTRIBUTING.md](CONTRIBUTING.md) for ADR process and chaos testing.
 
 ## Security & Compliance

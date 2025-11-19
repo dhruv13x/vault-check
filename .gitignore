@@ -4,3 +4,6 @@ __pycache__/
 build/
 dist/
 *.egg-info/
+.coverage
+tests/integration/test.env
+tests/e2e/e2e.env
