@@ -14,3 +14,11 @@ services:
     image: redis:6
     ports:
       - "6379:6379"
+
+  test:
+    build: .
+    depends_on:
+      - postgres
+      - redis
+    command: python -m pytest tests/e2e
+    network_mode: host
