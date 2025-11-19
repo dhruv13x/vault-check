@@ -1,3 +1,5 @@
+# src/vault_check/__main__.py
+
 import asyncio
 import sys
 

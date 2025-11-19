@@ -1,3 +1,5 @@
+# src/vault_check/__init__.py
+
 __all__ = [
     "cli",
     "config",

@@ -1,3 +1,5 @@
+# src/vault_check/signals.py
+
 import asyncio
 import logging
 import signal

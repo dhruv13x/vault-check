@@ -1,3 +1,5 @@
+# src/vault_check/output.py
+
 import json
 import logging
 import smtplib

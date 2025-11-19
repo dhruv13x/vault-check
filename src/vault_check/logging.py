@@ -1,3 +1,5 @@
+# src/vault_check/logging.py
+
 import json
 import logging
 import sys

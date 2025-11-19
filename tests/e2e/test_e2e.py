@@ -1,3 +1,5 @@
+# tests/e2e/test_e2e.py
+
 import shutil
 import subprocess
 import time

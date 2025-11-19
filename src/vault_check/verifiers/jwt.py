@@ -1,3 +1,5 @@
+# src/vault_check/verifiers/jwt.py
+
 import logging
 
 from ..utils import check_entropy, mask_sensitive

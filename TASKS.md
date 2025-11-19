@@ -92,6 +92,6 @@
 
 10. **Final Review & PR**
     - Generate PR description: Changes, risks, migration notes (none needed, drop-in replace).
-    - Tag v2.3.1; changelog entry.
+    - Tag v1.0.0; changelog entry.
     - Deliverable: Zipped refactored src/tests/ + PR.md.
     - AC: JULES self-review: No TODOs, 100% typed.

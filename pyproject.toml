@@ -56,3 +56,46 @@ Source = "https://github.com/dhruv13x/vault-check"
 package-dir = {"" = "src"}
 [tool.setuptools.packages.find]
 where = ["src"]
+
+
+
+
+[tool.pytest.ini_options]
+# Make sure pytest can import package from src/
+pythonpath = [
+    ".",
+    "src",
+]
+
+# Where pytest finds tests
+testpaths = [
+    "tests",
+]
+
+asyncio_mode = "auto"
+
+addopts = [
+    "--timeout=10",
+    "--durations=10",
+    "--log-cli-level=INFO",
+    "-v",
+    "-ra",
+    "--tb=short",
+    "--showlocals",
+
+    # <-- Measure coverage for the real source location
+    "--cov=src/vault_check",
+    "--cov-report=term-missing:skip-covered",
+    "--cov-fail-under=90",
+]
+
+[tool.coverage.run]
+branch = true
+# Measure the actual source directory
+source = [
+    "src/vault_check",
+]
+
+[tool.coverage.report]
+fail_under = 90
+show_missing = true

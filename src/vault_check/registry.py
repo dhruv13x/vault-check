@@ -1,3 +1,5 @@
+# src/vault_check/registry.py
+
 from typing import Any, Callable, Dict, List, Optional
 
 
