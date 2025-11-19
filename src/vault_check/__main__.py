@@ -1,9 +1,11 @@
 # src/vault_check/__main__.py
 
-import asyncio
-import sys
+from .cli import entry_point
 
-from .cli import main
+
+def main():
+    entry_point()
+
 
 if __name__ == "__main__":
-    sys.exit(asyncio.run(main(sys.argv[1:])))
+    main()
