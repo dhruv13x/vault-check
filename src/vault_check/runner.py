@@ -14,7 +14,7 @@ from .output import print_summary, send_email_alert
 from .registry import VerifierRegistry
 from .signals import install_signal_handlers
 from .verifiers import (
-    AccountsAPIVerifier,
+#    AccountsAPIVerifier,
     DatabaseVerifier,
     GoogleOAuthVerifier,
     JWTExpirationVerifier,
@@ -146,17 +146,17 @@ class Runner:
                         kwargs={"dry_run": self.dry_run, "skip_live": self.skip_live},
                     )
 
-        if not self.verifiers or "accounts" in self.verifiers:
-            accounts_verifier = AccountsAPIVerifier(self.http)
-            registry.add(
-                "Accounts API",
-                accounts_verifier.verify,
-                args=[
-                    loaded_secrets.get("ACCOUNTS_API_KEY"),
-                    loaded_secrets.get("ACCOUNTS_API_URL"),
-                ],
-                kwargs={"dry_run": self.dry_run, "skip_live": self.skip_live},
-            )
+#        if not self.verifiers or "accounts" in self.verifiers:
+#            accounts_verifier = AccountsAPIVerifier(self.http)
+#            registry.add(
+#                "Accounts API",
+#                accounts_verifier.verify,
+#                args=[
+#                    loaded_secrets.get("ACCOUNTS_API_KEY"),
+#                    loaded_secrets.get("ACCOUNTS_API_URL"),
+#                ],
+#                kwargs={"dry_run": self.dry_run, "skip_live": self.skip_live},
+#            )
 
         if not self.verifiers or "webhook" in self.verifiers:
             webhook_verifier = WebhookVerifier()
