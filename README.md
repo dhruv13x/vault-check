@@ -1,4 +1,3 @@
-```markdown
 # vault-check ✨
 
 [![PyPI Version](https://img.shields.io/pypi/v/vault-check.svg)](https://pypi.org/project/vault-check/)
@@ -206,4 +205,3 @@ MIT © 2025 dhruv13x. See [LICENSE](LICENSE).
 ---
 
 *Built with ❤️ for reliable bot platforms. Questions? Open an issue.*
-```
