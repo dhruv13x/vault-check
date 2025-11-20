@@ -32,7 +32,7 @@ async def test_http_client_get_json_success(mock_session):
 async def test_http_client_get_json_retry(mock_session):
     mock_response_fail = MagicMock()
     mock_response_fail.raise_for_status = MagicMock(side_effect=aiohttp.ClientResponseError(None, None))
-    mock_response_fail.text = AsyncMock(return_value="{}")  # Added this line
+    mock_response_fail.text = AsyncMock(return_value="{}")
 
     mock_response_success = MagicMock()
     mock_response_success.status = 200

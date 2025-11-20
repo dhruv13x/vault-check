@@ -1,6 +1,6 @@
 # src/vault_check/verifiers/__init__.py
 
-# from .accounts import AccountsAPIVerifier
+from .accounts import AccountsAPIVerifier
 from .base import BaseVerifier
 from .database import DatabaseVerifier
 from .google import GoogleOAuthVerifier
@@ -16,7 +16,7 @@ from .telegram import (
 from .webhook import WebhookVerifier
 
 __all__ = [
-#     "AccountsAPIVerifier",
+    "AccountsAPIVerifier",
     "BaseVerifier",
     "DatabaseVerifier",
     "GoogleOAuthVerifier",
