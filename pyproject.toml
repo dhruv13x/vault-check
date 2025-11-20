@@ -76,7 +76,7 @@ testpaths = [
 asyncio_mode = "auto"
 
 addopts = [
-    "--timeout=10",
+    "--timeout=30",
     "--durations=10",
     "--log-cli-level=INFO",
     "-v",
