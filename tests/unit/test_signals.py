@@ -1,13 +1,35 @@
-from __future__ import annotations
+# tests/unit/test_signals.py
 
 import asyncio
-from unittest.mock import MagicMock
+import signal
+from unittest.mock import MagicMock, patch
 
-from vault_check.signals import install_signal_handlers
+import pytest
+
+from vault_check.signals import ShutdownManager, install_signal_handlers
 
 
-def test_install_signal_handlers():
-    """Verify that signal handlers are installed correctly."""
+@pytest.fixture
+def mock_loop():
+    """Fixture for a mocked asyncio event loop."""
     loop = MagicMock(spec=asyncio.AbstractEventLoop)
-    install_signal_handlers(loop, [])
-    assert loop.add_signal_handler.call_count == 2
+    loop.add_signal_handler = MagicMock()
+    loop.remove_signal_handler = MagicMock()
+    return loop
+
+
+def test_shutdown_manager():
+    """Verify that shutdown manager works as expected."""
+    manager = ShutdownManager()
+    assert not manager.is_shutting_down()
+    manager.trigger()
+    assert manager.is_shutting_down()
+
+
+def test_install_signal_handlers(mock_loop):
+    """Verify that signal handlers are installed correctly."""
+    tasks = [MagicMock(spec=asyncio.Task)]
+    manager = install_signal_handlers(mock_loop, tasks)
+
+    assert isinstance(manager, ShutdownManager)
+    assert len(mock_loop.add_signal_handler.call_args_list) == 2
