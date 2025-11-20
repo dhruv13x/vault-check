@@ -70,8 +70,10 @@ async def main(argv: List[str]) -> int:
     )
     load_dotenv(args.env_file)
 
+    connector = aiohttp.TCPConnector(ssl=True)
     async with aiohttp.ClientSession(
-        timeout=aiohttp.ClientTimeout(total=args.http_timeout)
+        timeout=aiohttp.ClientTimeout(total=args.http_timeout),
+        connector=connector
     ) as session:
         http = HTTPClient(session, args.retries, DEFAULT_BACKOFF, DEFAULT_JITTER)
 
