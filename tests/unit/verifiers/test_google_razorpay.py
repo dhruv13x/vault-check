@@ -14,6 +14,7 @@ async def test_google_oauth_verifier_success():
         return_value='{"scopes": "read"}'
     )
     mock_response.headers = {}
+    mock_response.raise_for_status = MagicMock() # Explicitly set
     http_client = HTTPClient(mock_session)
     verifier = GoogleOAuthVerifier(http_client)
     await verifier.verify("test_client_id", "test_client_secret", "test_project_id")
@@ -28,6 +29,7 @@ async def test_razorpay_verifier_success():
         return_value='{"count": 0}'
     )
     mock_response.headers = {}
+    mock_response.raise_for_status = MagicMock() # Explicitly set
     http_client = HTTPClient(mock_session)
     verifier = RazorpayVerifier(http_client)
     await verifier.verify("test_key_id", "test_key_secret", "test_webhook_secret")
