@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vault-check"
-version = "2.0.0"
+version = "3.0.0"
 description = "Production-grade secrets verifier for bot platforms"
 readme = "README.md"
 license = {text = "MIT"}
@@ -62,13 +62,10 @@ where = ["src"]
 
 
 [tool.pytest.ini_options]
-# Make sure pytest can import package from src/
 pythonpath = [
-    ".",
     "src",
 ]
 
-# Where pytest finds tests
 testpaths = [
     "tests",
 ]
@@ -84,19 +81,17 @@ addopts = [
     "--tb=short",
     "--showlocals",
 
-    # <-- Measure coverage for the real source location
     "--cov=src/vault_check",
     "--cov-report=term-missing:skip-covered",
-    "--cov-fail-under=80",
+    "--cov-fail-under=90",
 ]
 
 [tool.coverage.run]
 branch = true
-# Measure the actual source directory
 source = [
     "src/vault_check",
 ]
 
 [tool.coverage.report]
-fail_under = 80
+fail_under = 90
 show_missing = true
