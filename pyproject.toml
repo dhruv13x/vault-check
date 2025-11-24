@@ -25,6 +25,7 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "rich>=13.0.0",
     "cryptography>=41.0.0",
+    "zxcvbn>=4.4.28",
 ]
 
 [project.optional-dependencies]
