@@ -71,9 +71,9 @@ Exit codes: `0=PASS`, `2=FAIL` (scriptable for CI).
 
 **Example Output** (Rich mode):
 ```
-Starting verifier v2.3.0 (dry-run: False, skip-live: False)
+Starting verifier v2.3.1 (dry-run: False, skip-live: False)
 ┌──────────── Verification Summary ─────────────┐
-│ Version    │ 2.3.0                           │
+│ Version    │ 2.3.1                           │
 │ Status     │ PASSED                          │
 │ Warnings   │ None                            │
 │ Errors     │ None ✅                          │
@@ -100,31 +100,42 @@ Starting verifier v2.3.0 (dry-run: False, skip-live: False)
    - Flag: `--aws-ssm-prefix /app/secrets`.
    - Assumes IAM role with `ssm:GetParameter` (decrypted).
 
-### Supported Keys (SECRET_KEYS)
+### Supported Keys & Verifiers
 
-| Key                       | Verifier                  | Notes                          |
-|---------------------------|---------------------------|--------------------------------|
-| `CORE_PLATFORM_DB_URL`   | DatabaseVerifier         | Postgres/SQLite; Supabase SSL  |
-| `SESSION_ENCRYPTION_KEY` | SessionKeyVerifier       | Fernet + zxcvbn entropy ≥3    |
-| `JWT_SECRET`             | JWTSecretVerifier        | ≥32 chars + entropy           |
-| `API_ID` / `API_HASH`    | TelegramAPIVerifier      | Telegram MTProto creds        |
-| `FORWARDER_BOT_TOKEN`    | TelegramBotVerifier      | Live `/getMe` probe           |
-| `RAZORPAY_KEY_ID`        | RazorpayVerifier         | Basic auth to `/v1/plans`     |
-| ... (20+ total)          | See `cli.py` for full    | Optional: Razorpay/Google     |
+The verifier suite automatically detects and validates the following secret keys if they are present.
+
+| Key | Verifier | Notes |
+|---|---|---|
+| `CORE_PLATFORM_DB_URL` | `DatabaseVerifier` | Validates Postgres/SQLite connection strings. |
+| `REDIS_URL` | `RedisVerifier` | Checks Redis connection and `PING` command. |
+| `SESSION_ENCRYPTION_KEY` | `SessionKeyVerifier` | **God Level**: Fernet key with zxcvbn entropy check (score >= 3). |
+| `JWT_SECRET` | `JWTSecretVerifier` | Checks for a high-entropy secret (>= 32 chars). |
+| `JWT_EXPIRATION_SECONDS` | `JWTExpirationVerifier` | Ensures the expiration time is a valid integer. |
+| `API_ID` / `API_HASH` | `TelegramAPIVerifier` | Validates Telegram MTProto API credentials. |
+| `BOT_TOKEN` | `TelegramBotVerifier` | **God Level**: Performs a live `/getMe` probe to the Telegram Bot API. |
+| `OWNER_ID` / `ADMIN_IDS` | `TelegramIDVerifier` | Checks for valid Telegram user/chat IDs. |
+| `ACCOUNTS_API_KEY` | `AccountsAPIVerifier` | Validates the Accounts API key format. |
+| `WEBHOOK_URL` | `WebhookVerifier` | Ensures the URL is valid and reachable. |
+| `RAZORPAY_KEY_ID` | `RazorpayVerifier` | Verifies Razorpay credentials via a live API call. |
+| `GOOGLE_OAUTH_CREDS` | `GoogleOAuthVerifier` | Checks the structure of Google OAuth credentials JSON. |
 
 ### CLI Flags
 
-```bash
-vault-check --help
-```
+The tool offers extensive command-line control. For a full list, run `vault-check --help`.
 
-Key flags:
-- `--dry-run`: Format/entropy only (no connections).
-- `--skip-live`: Skip probes but fetch secrets.
-- `--log-level=DEBUG`: Verbose output.
-- `--concurrency=10`: Parallel verifiers (default:5).
-- `--overall-timeout=120`: Max runtime (s).
-- `--email-alert smtp from to pass`: Alert on FAIL.
+| Flag | Type | Default | Description |
+|---|---|---|---|
+| `--env-file` | `string` | `.env` | Path to the environment file. |
+| `--log-level` | `choice` | `INFO` | Logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`). |
+| `--log-format` | `choice` | `text` | Log output format (`text`, `json`). |
+| `--color` | `bool` | `False` | Enable colorized log output. |
+| `--dry-run` | `bool` | `False` | Perform format/entropy checks only (no live probes). |
+| `--skip-live` | `bool` | `False` | Fetch secrets but skip all live connection probes. |
+| `--concurrency` | `int` | `5` | Number of parallel verifiers to run. |
+| `--overall-timeout` | `float` | `60.0` | Maximum total runtime in seconds. |
+| `--verifiers` | `list` | `None` | A space-separated list of specific verifiers to run. |
+| `--output-json` | `string` | `None` | Path to write a JSON output report. |
+| `--email-alert` | `list` | `None` | Send email alert on failure (`SMTP_SERVER FROM TO PASS`). |
 
 ## Examples
 
@@ -167,7 +178,32 @@ Common Errors:
 - `Weak key (score 1/4)`: Use pwgen or zxcvbn feedback.
 - `Overall timeout exceeded`: Increase `--overall-timeout` or `--concurrency=1`.
 
-## Contributing & Extending
+🏗️ Architecture
+
+The tool is designed with a modular, async-first architecture.
+
+```
+src/vault_check/
+├── cli.py          # Entry point, argparse CLI
+├── runner.py       # Orchestrates verifiers w/ asyncio
+├── secrets.py      # Fetches secrets (Doppler, AWS, .env)
+├── verifiers/      # Individual check logic
+│   ├── base.py
+│   └── ...
+└── http_client.py  # Centralized aiohttp client
+```
+
+Core flow: `cli.py` parses args -> `secrets.py` loads secrets -> `runner.py` executes all registered `verifiers` concurrently.
+
+🗺️ Roadmap
+
+- [x] Core verifier suite (DB, Redis, JWT, Telegram)
+- [x] Multi-source secret fetching (Doppler, AWS)
+- [x] Concurrency and timeouts
+- [ ] Plugin system for custom verifiers
+- [ ] Web UI for results dashboard
+
+## 🤝 Contributing & Extending
 
 Fork, add verifiers (inherit `BaseVerifier`), and PR with tests (pytest-asyncio).
 
@@ -183,11 +219,11 @@ Fork, add verifiers (inherit `BaseVerifier`), and PR with tests (pytest-asyncio)
    # Integrate in main() checks
    ```
 
-## Testing
+## ✅ Testing
 
 To run the integration and end-to-end tests, you will need to create a `.env` file in the `tests/integration` and `tests/e2e` directories. For a template, see the `.env.example` file.
 
-**Important**: Do not use these example values in production. Always generate strong, unique secrets for your production environment.
+> **Warning**: Do not use these example values in production. Always generate strong, unique secrets for your production environment.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for ADR process and chaos testing.
 
