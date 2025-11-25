@@ -1,3 +1,5 @@
+# tests/unit/test_main_entrypoint.py
+
 import sys
 from unittest.mock import patch
 from vault_check.__main__ import main

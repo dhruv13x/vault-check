@@ -1,3 +1,5 @@
+# tests/unit/test_signals_coverage.py
+
 import signal
 import asyncio
 import pytest

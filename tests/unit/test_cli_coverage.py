@@ -1,3 +1,5 @@
+# tests/unit/test_cli_coverage.py
+
 import sys
 import pytest
 from unittest.mock import patch, MagicMock

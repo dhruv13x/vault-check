@@ -1,3 +1,5 @@
+# tests/unit/test_http_client_coverage.py
+
 import pytest
 from unittest.mock import MagicMock, AsyncMock
 import aiohttp

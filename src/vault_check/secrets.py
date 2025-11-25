@@ -1,3 +1,5 @@
+# src/vault_check/secrets.py
+
 from __future__ import annotations
 
 import logging

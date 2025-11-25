@@ -25,6 +25,7 @@ from .http_client import HTTPClient
 from .logging import setup_logging
 from .runner import Runner
 from .secrets import load_secrets
+from .banner import print_logo
 
 __version__ = "2.3.1"
 
@@ -102,6 +103,7 @@ async def main(argv: List[str]) -> int:
 
 def entry_point():
     """Wrapper for the async main function."""
+    print_logo()
     try:
         sys.exit(asyncio.run(main(sys.argv[1:])))
     except KeyboardInterrupt:
