@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vault-check"
-version = "3.0.2"
+version = "3.0.3"
 description = "Production-grade secrets verifier for bot platforms"
 readme = "README.md"
 license = {text = "MIT"}
