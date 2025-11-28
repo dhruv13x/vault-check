@@ -11,10 +11,11 @@ from typing import Any, Dict, List
 from rich.console import Console
 from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
 
-from .config import Summary
+from .config import Summary, SECRET_KEYS # Added SECRET_KEYS
 from .output import print_summary, send_email_alert
 from .registry import VerifierRegistry
 from .signals import install_signal_handlers
+from .heuristics import HeuristicsEngine # Added HeuristicsEngine
 from .verifiers import (
 #    AccountsAPIVerifier,
     DatabaseVerifier,
@@ -28,6 +29,8 @@ from .verifiers import (
     TelegramBotVerifier,
     TelegramIDVerifier,
     WebhookVerifier,
+    S3Verifier, # Added S3Verifier
+    SMTPVerifier, # Added SMTPVerifier
 )
 
 
@@ -197,6 +200,52 @@ class Runner:
                 kwargs={"dry_run": self.dry_run, "skip_live": self.skip_live},
                 is_warn_only=True,
             )
+
+        # Auto-Discovery
+        if not self.verifiers or "auto" in self.verifiers:
+            processed_keys = set(SECRET_KEYS.keys())
+            for key, value in loaded_secrets.items():
+                if key in processed_keys:
+                    continue
+
+                verifier_cls = HeuristicsEngine.match(value)
+                if verifier_cls:
+                    kwargs = {"dry_run": self.dry_run, "skip_live": self.skip_live}
+                    args = []
+
+                    if issubclass(verifier_cls, DatabaseVerifier):
+                        verifier = verifier_cls(self.db_timeout, retries=self.retries)
+                        name = f"{key} (Auto)"
+                        args = [name, value]
+                    elif issubclass(verifier_cls, RedisVerifier):
+                        verifier = verifier_cls()
+                        name = f"{key} (Auto)"
+                        args = [name, value]
+                    elif issubclass(verifier_cls, S3Verifier):
+                        verifier = verifier_cls()
+                        name = f"{key} (Auto)"
+                        # S3Verifier.verify(bucket_name, ...)
+                        # value is the s3:// url
+                        args = [value]
+                    elif issubclass(verifier_cls, SMTPVerifier):
+                        verifier = verifier_cls()
+                        name = f"{key} (Auto)"
+                        # SMTPVerifier.verify(host, ...)
+                        args = [value]
+                    else:
+                        try:
+                            verifier = verifier_cls()
+                            name = f"{key} (Auto)"
+                        except TypeError:
+                            logging.warning(f"Could not instantiate auto-discovered verifier for {key}")
+                            continue
+                    
+                    registry.add(
+                        name,
+                        verifier.verify,
+                        args=args,
+                        kwargs=kwargs,
+                    )
 
         loop = asyncio.get_running_loop()
         semaphore = asyncio.Semaphore(self.concurrency)

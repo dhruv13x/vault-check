@@ -40,8 +40,6 @@ async def test_google_verifier_failure():
 # Redis
 @pytest.mark.asyncio
 async def test_redis_verifier_connection_error():
-    import redis.asyncio as redis
-
     verifier = RedisVerifier()
     # Mock redis.from_url
     mock_client = AsyncMock()
@@ -49,7 +47,7 @@ async def test_redis_verifier_connection_error():
     mock_client.aclose = AsyncMock()
 
     with pytest.raises(Exception):
-        with patch("redis.asyncio.from_url", return_value=mock_client):
+        with patch("vault_check.verifiers.redis.aioredis.Redis.from_url", return_value=mock_client):
              await verifier.verify("Redis", "redis://localhost")
 
 @pytest.mark.asyncio

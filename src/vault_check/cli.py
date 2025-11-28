@@ -84,6 +84,7 @@ async def main(argv: List[str]) -> int:
             args.doppler_project,
             args.doppler_config,
             args.dry_run,
+            include_all=True,
         )
 
         runner = Runner(

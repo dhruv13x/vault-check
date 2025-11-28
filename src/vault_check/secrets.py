@@ -19,6 +19,7 @@ async def load_secrets(
     doppler_project: str = "default_project",
     doppler_config: str = "dev",
     dry_run: bool = False,
+    include_all: bool = False,
 ) -> Dict[str, Any]:
     secrets: Dict[str, Any] = {}
     doppler_token = os.getenv("DOPPLER_TOKEN")
@@ -52,5 +53,22 @@ async def load_secrets(
             logging.info(f"AWS SSM secrets fetched (count={len(secrets)})")
         except Exception as e:
             logging.warning(f"AWS SSM fetch failed: {e}; using .env")
+
+    if include_all:
+        # Start with local env
+        merged = os.environ.copy()
+        # Overlay remote secrets (they take precedence or just add to the pool?
+        # Standard pattern: Remote overrides Local for overlapping keys.
+        # `secrets` contains the remote ones.
+        merged.update(secrets)
+        
+        # However, we must ensure get_secret_value() logic is respected if used later.
+        # But here we are returning raw values mostly.
+        # The existing return logic was:
+        # {k: get_secret_value(secrets, k) or os.getenv(k) for k in SECRET_KEYS}
+        # get_secret_value checks `secrets` dict.
+        
+        # So `merged` is effectively the superset.
+        return merged
 
     return {k: get_secret_value(secrets, k) or os.getenv(k) for k in SECRET_KEYS}
