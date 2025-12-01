@@ -16,8 +16,8 @@ from .utils import get_secret_value
 async def load_secrets(
     http: HTTPClient,
     aws_ssm_prefix: str | None = None,
-    doppler_project: str = "default_project",
-    doppler_config: str = "dev",
+    doppler_project: str = "bot-platform",
+    doppler_config: str = "dev_bot-platform",
     dry_run: bool = False,
     include_all: bool = False,
 ) -> Dict[str, Any]:
@@ -57,18 +57,15 @@ async def load_secrets(
     if include_all:
         # Start with local env
         merged = os.environ.copy()
-        # Overlay remote secrets (they take precedence or just add to the pool?
-        # Standard pattern: Remote overrides Local for overlapping keys.
-        # `secrets` contains the remote ones.
-        merged.update(secrets)
         
-        # However, we must ensure get_secret_value() logic is respected if used later.
-        # But here we are returning raw values mostly.
-        # The existing return logic was:
-        # {k: get_secret_value(secrets, k) or os.getenv(k) for k in SECRET_KEYS}
-        # get_secret_value checks `secrets` dict.
+        # Process secrets to ensure we have simple values (strings) not dicts
+        processed_secrets = {}
+        for k in secrets:
+             val = get_secret_value(secrets, k)
+             if val is not None:
+                 processed_secrets[k] = val
         
-        # So `merged` is effectively the superset.
+        merged.update(processed_secrets)
         return merged
 
     return {k: get_secret_value(secrets, k) or os.getenv(k) for k in SECRET_KEYS}

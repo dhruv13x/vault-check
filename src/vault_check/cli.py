@@ -35,8 +35,8 @@ __version__ = "2.3.1"
 async def main(argv: List[str]) -> int:
     parser = argparse.ArgumentParser(description=f"Secrets verifier ({__version__})")
     parser.add_argument("--env-file", default=".env")
-    parser.add_argument("--doppler-project", default="default_project")
-    parser.add_argument("--doppler-config", default="dev")
+    parser.add_argument("--doppler-project", default="bot-platform")
+    parser.add_argument("--doppler-config", default="dev_bot-platform")
     parser.add_argument("--aws-ssm-prefix", help="AWS SSM parameter prefix")
     parser.add_argument(
         "--log-level",

@@ -271,7 +271,7 @@ class Runner:
                     await check["callable"](*check["args"], **check["kwargs"])
                     progress.update(task_id, completed=100)
                     logging.info(
-                        "Verification check finished",
+                        f"Verification check finished: {check['name']} - OK",
                         extra={"check_name": check["name"], "status": "OK"},
                     )
                 except Exception as e:
@@ -282,7 +282,7 @@ class Runner:
                     if check["is_warn_only"]:
                         warnings.append(msg)
                         logging.warning(
-                            "Verification check finished",
+                            f"Verification check finished: {check['name']} - WARNING - {msg}",
                             extra={
                                 "check_name": check["name"],
                                 "status": "WARNING",
@@ -292,7 +292,7 @@ class Runner:
                     else:
                         errors.append(msg)
                         logging.error(
-                            "Verification check finished",
+                            f"Verification check finished: {check['name']} - ERROR - {msg}",
                             extra={
                                 "check_name": check["name"],
                                 "status": "ERROR",
