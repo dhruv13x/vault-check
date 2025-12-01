@@ -19,6 +19,7 @@ SECRET_KEYS = {
     "API_ID": "Telegram API_ID",
     "API_HASH": "Telegram API_HASH",
     "OWNER_TELEGRAM_ID": "Owner Telegram ID",
+    "OWNER_SESSION_STRING": "Owner Session String",
     "ADMIN_USER_IDS": "Admin User IDs",
     "FORWARDER_BOT_TOKEN": "Forwarder Bot Token",
     "AUTH_BOT_TOKEN": "Auth Bot Token",

@@ -50,3 +50,17 @@ class TelegramBotVerifier(BaseVerifier):
             data = await self.http.get_json(url)
             if not isinstance(data, dict) or not data.get("ok"):
                 raise RuntimeError(f"Failed: {data.get('description', 'unknown')}")
+
+
+class TelegramSessionVerifier(BaseVerifier):
+    async def verify(self, val: str | None, **kwargs) -> None:
+        logging.info(f"Checking [bold]OWNER_SESSION_STRING[/bold] (masked: {mask_sensitive(val)})")
+        if not val:
+            raise ValueError("Missing session string")
+
+        if len(val) < 100:
+            raise ValueError("Session string too short")
+
+        if not re.match(r"^[A-Za-z0-9_-]+={0,2}$", val):
+            raise ValueError("Invalid base64url characters")
+

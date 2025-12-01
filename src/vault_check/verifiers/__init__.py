@@ -12,6 +12,7 @@ from .telegram import (
     TelegramAPIVerifier,
     TelegramBotVerifier,
     TelegramIDVerifier,
+    TelegramSessionVerifier,
 )
 from .webhook import WebhookVerifier
 from .s3 import S3Verifier
@@ -30,6 +31,7 @@ __all__ = [
     "TelegramAPIVerifier",
     "TelegramBotVerifier",
     "TelegramIDVerifier",
+    "TelegramSessionVerifier",
     "WebhookVerifier",
     "S3Verifier",
     "SMTPVerifier",

@@ -28,6 +28,7 @@ from .verifiers import (
     TelegramAPIVerifier,
     TelegramBotVerifier,
     TelegramIDVerifier,
+    TelegramSessionVerifier,
     WebhookVerifier,
     S3Verifier, # Added S3Verifier
     SMTPVerifier, # Added SMTPVerifier
@@ -137,6 +138,14 @@ class Runner:
                 args=[loaded_secrets.get("ADMIN_USER_IDS")],
                 is_warn_only=True,
             )
+
+            tg_session_verifier = TelegramSessionVerifier()
+            if session_str := loaded_secrets.get("OWNER_SESSION_STRING"):
+                registry.add(
+                    "Owner Session String",
+                    tg_session_verifier.verify,
+                    args=[session_str],
+                )
 
             tg_bot_verifier = TelegramBotVerifier(self.http)
             for bot_key, bot_name in [
