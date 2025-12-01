@@ -20,6 +20,7 @@ async def load_secrets(
     doppler_config: str = "dev_bot-platform",
     dry_run: bool = False,
     include_all: bool = False,
+    initial_doppler_token: str | None = None,
 ) -> Dict[str, Any]:
     secrets: Dict[str, Any] = {}
     doppler_token = os.getenv("DOPPLER_TOKEN")
@@ -33,6 +34,7 @@ async def load_secrets(
             logging.warning(f"AWS SSM init failed: {e}; falling back")
 
     if doppler_token and not dry_run:
+        token_source = "env var" if initial_doppler_token else ".env file"
         doppler_url = f"https://api.doppler.com/v3/configs/config/secrets?project={doppler_project}&config={doppler_config}"
         try:
             data = await http.get_json(
@@ -41,7 +43,7 @@ async def load_secrets(
             if not isinstance(data, dict):
                 raise ValueError("Unexpected Doppler response type")
             secrets = data.get("secrets", data)
-            logging.info(f"Doppler secrets fetched (count={len(secrets)})")
+            logging.info(f"Doppler secrets fetched using {token_source} (count={len(secrets)})")
         except Exception as e:
             logging.warning(f"Doppler fetch failed: {e}; using .env")
     elif aws_ssm_client:

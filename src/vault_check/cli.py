@@ -76,6 +76,9 @@ async def main(argv: List[str]) -> int:
         extra={"app_name": "vault-check", "app_version": __version__},
     )
 
+    # Capture initial state of DOPPLER_TOKEN to distinguish source later
+    initial_doppler_token = os.getenv("DOPPLER_TOKEN")
+
     env_path = args.env_file
     if args.project_path:
         if not os.path.isdir(args.project_path):
@@ -103,6 +106,7 @@ async def main(argv: List[str]) -> int:
             args.doppler_config,
             args.dry_run,
             include_all=True,
+            initial_doppler_token=initial_doppler_token,
         )
 
         runner = Runner(
