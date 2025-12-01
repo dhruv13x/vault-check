@@ -142,6 +142,7 @@ class Runner:
             for bot_key, bot_name in [
                 ("FORWARDER_BOT_TOKEN", "Forwarder Bot Token"),
                 ("AUTH_BOT_TOKEN", "Auth Bot Token"),
+                ("ADMIN_BOT_TOKEN", "Admin Bot Token"),
             ]:
                 if token := loaded_secrets.get(bot_key):
                     registry.add(

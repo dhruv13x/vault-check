@@ -173,3 +173,30 @@ async def test_runner_verifiers_partial_selection(runner):
             added_names = [call.args[0] for call in registry.add.call_args_list]
             assert "Core Platform Redis" in added_names
             assert "Core Platform DB" not in added_names
+
+@pytest.mark.asyncio
+async def test_runner_registers_all_bots(runner):
+    """Verify that FORWARDER_BOT_TOKEN, AUTH_BOT_TOKEN, and ADMIN_BOT_TOKEN are registered."""
+    runner.verifiers = ["telegram"]
+    loaded_secrets = {
+        "FORWARDER_BOT_TOKEN": "123:forwarder",
+        "AUTH_BOT_TOKEN": "456:auth",
+        "ADMIN_BOT_TOKEN": "789:admin",
+    }
+
+    with patch("vault_check.runner.VerifierRegistry") as MockRegistry:
+        registry = MockRegistry.return_value
+        registry.checks = []
+        
+        mock_shutdown = MagicMock()
+        mock_shutdown.is_shutting_down.return_value = False
+
+        with patch("vault_check.runner.install_signal_handlers", return_value=mock_shutdown):
+            await runner.run(loaded_secrets, "1.0.0")
+
+            # Check that all 3 bot verifiers were added
+            added_names = [call.args[0] for call in registry.add.call_args_list]
+            
+            assert "Forwarder Bot Token" in added_names
+            assert "Auth Bot Token" in added_names
+            assert "Admin Bot Token" in added_names

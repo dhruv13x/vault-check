@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import os
 import sys
 from typing import List
 
@@ -57,6 +58,11 @@ async def main(argv: List[str]) -> int:
     )
     parser.add_argument("--version", action="store_true")
     parser.add_argument("--verifiers", nargs="+", help="A list of verifiers to run")
+    parser.add_argument(
+        "project_path",
+        nargs="?",
+        help="Path to the project directory containing .env file",
+    )
     args = parser.parse_args(argv)
 
     if args.version:
@@ -69,7 +75,19 @@ async def main(argv: List[str]) -> int:
         args.color,
         extra={"app_name": "vault-check", "app_version": __version__},
     )
-    load_dotenv(args.env_file)
+
+    env_path = args.env_file
+    if args.project_path:
+        if not os.path.isdir(args.project_path):
+            print(
+                f"Error: Directory '{args.project_path}' not found or is not a directory.",
+                file=sys.stderr,
+            )
+            return 1
+        if not os.path.isabs(env_path):
+            env_path = os.path.join(args.project_path, env_path)
+
+    load_dotenv(env_path)
 
     connector = aiohttp.TCPConnector(ssl=True)
     async with aiohttp.ClientSession(

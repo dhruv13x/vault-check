@@ -22,6 +22,7 @@ SECRET_KEYS = {
     "ADMIN_USER_IDS": "Admin User IDs",
     "FORWARDER_BOT_TOKEN": "Forwarder Bot Token",
     "AUTH_BOT_TOKEN": "Auth Bot Token",
+    "ADMIN_BOT_TOKEN": "Admin Bot Token",
     "ACCOUNTS_API_URL": "Accounts API URL",
     "ACCOUNTS_API_KEY": "Accounts API Key",
     "BASE_WEBHOOK_URL": "Base Webhook URL",
