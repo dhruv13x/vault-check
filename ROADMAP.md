@@ -34,7 +34,7 @@ This document outlines the strategic direction for `vault-check`, from core esse
   - [x] Implement a registration system for custom verifier plugins.
   - [ ] Publish a developer guide for creating plugins.
 - [ ] **Web UI Dashboard**: Visualize verification results.
-  - [ ] A simple web-based dashboard to view the latest and historical verification reports.
+  - [x] A simple web-based dashboard to view the latest and historical verification reports.
   - [ ] Real-time updates via WebSockets.
 - [ ] **Enhanced Reporting**: More detailed and actionable reports.
   - [ ] Suggestions for fixing common errors (e.g., "Your Fernet key is weak, generate a new one with...").
