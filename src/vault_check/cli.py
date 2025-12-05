@@ -72,11 +72,86 @@ async def main(argv: List[str]) -> int:
         print(__version__)
         return 0
 
+    setup_logging(
+        args.log_level,
+        args.log_format,
+        args.color,
+        extra={"app_name": "vault-check", "app_version": __version__},
+    )
+
     if args.dashboard:
         from .dashboard import create_dashboard_app
         print(f"Starting dashboard on http://localhost:{args.dashboard_port}")
         print(f"Serving reports from: {os.path.abspath(args.reports_dir)}")
-        web_app = create_dashboard_app(args.reports_dir)
+
+        # Define runner factory for dashboard to spawn new runners
+        async def runner_factory():
+            # This factory needs to create a fresh http session and runner on demand
+            # Or reuse existing configuration but we need to load secrets freshly potentially
+            # For simplicity, we create a new session/runner similar to CLI flow.
+            # NOTE: args are captured from outer scope
+
+            # Re-load secrets to be fresh
+            initial_doppler_token_inner = os.getenv("DOPPLER_TOKEN")
+            env_path_inner = args.env_file
+            if args.project_path:
+                 if not os.path.isabs(env_path_inner):
+                    env_path_inner = os.path.join(args.project_path, env_path_inner)
+            load_dotenv(env_path_inner)
+
+            # We need a new connector/session for the background task?
+            # Or we can share if we are careful. But aiohttp sessions should be closed.
+            # Best to make a new one.
+            connector = aiohttp.TCPConnector(ssl=True)
+            session = aiohttp.ClientSession(
+                timeout=aiohttp.ClientTimeout(total=args.http_timeout),
+                connector=connector
+            )
+
+            # Note: The session needs to be closed properly.
+            # In this simple implementation we might rely on GC or context manager if we can structure it.
+            # However, `runner_factory` is returning (runner, secrets, version).
+            # The caller will use `runner.run()`.
+            # `Runner` has `self.http`.
+            # We should probably attach session cleanup to the runner or handle it in dashboard.
+
+            http = HTTPClient(session, args.retries, DEFAULT_BACKOFF, DEFAULT_JITTER)
+
+            loaded_secrets = await load_secrets(
+                http,
+                args.aws_ssm_prefix,
+                args.doppler_project,
+                args.doppler_config,
+                args.dry_run,
+                include_all=True,
+                initial_doppler_token=initial_doppler_token_inner,
+            )
+
+            runner_instance = Runner(
+                http,
+                args.concurrency,
+                args.db_timeout,
+                args.retries,
+                args.dry_run,
+                args.skip_live,
+                args.output_json,
+                args.email_alert,
+                args.verifiers,
+            )
+
+            # Patch run to close session after
+            original_run = runner_instance.run
+            async def run_with_cleanup(*a, **kw):
+                try:
+                    return await original_run(*a, **kw)
+                finally:
+                    await session.close()
+
+            runner_instance.run = run_with_cleanup
+
+            return runner_instance, loaded_secrets, __version__
+
+        web_app = create_dashboard_app(args.reports_dir, runner_factory=runner_factory)
         runner = aiohttp.web.AppRunner(web_app)
         await runner.setup()
         site = aiohttp.web.TCPSite(runner, 'localhost', args.dashboard_port)
@@ -88,13 +163,6 @@ async def main(argv: List[str]) -> int:
         except asyncio.CancelledError:
             await runner.cleanup()
         return 0
-
-    setup_logging(
-        args.log_level,
-        args.log_format,
-        args.color,
-        extra={"app_name": "vault-check", "app_version": __version__},
-    )
 
     # Capture initial state of DOPPLER_TOKEN to distinguish source later
     initial_doppler_token = os.getenv("DOPPLER_TOKEN")

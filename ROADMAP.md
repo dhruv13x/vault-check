@@ -33,7 +33,7 @@ This document outlines the strategic direction for `vault-check`, categorizing f
 
 - [x] **Basic Web UI Dashboard**: A simple web-based dashboard to view verification reports.
 - [x] **Basic Plugin System**: Architecture to support external verifiers.
-- [ ] **Real-time Dashboard Updates**: Implement WebSockets for live verification progress on the dashboard.
+- [x] **Real-time Dashboard Updates**: Implement WebSockets for live verification progress on the dashboard.
 - [ ] **Plugin Developer Guide**: Documentation and examples for creating and publishing custom verifiers.
 - [ ] **Enhanced Reporting**:
   - [ ] Actionable fix suggestions (e.g., "Your Fernet key is weak, generate a new one with `openssl...`").

@@ -2,19 +2,70 @@
 import json
 import os
 import aiohttp
+import asyncio
 from aiohttp import web
 import logging
 
-def create_dashboard_app(reports_dir: str) -> web.Application:
+def create_dashboard_app(reports_dir: str, runner_factory=None) -> web.Application:
     app = web.Application()
     app["reports_dir"] = reports_dir
+    app["websockets"] = set()
+    app["runner_factory"] = runner_factory
+
+    async def broadcast(message):
+        for ws in list(app["websockets"]):
+            try:
+                await ws.send_json(message)
+            except Exception:
+                app["websockets"].discard(ws)
+
+    app["broadcast"] = broadcast
 
     app.add_routes([
         web.get('/', handle_index),
+        web.get('/ws', handle_websocket),
         web.get('/api/reports', handle_list_reports),
         web.get('/api/reports/{filename}', handle_get_report),
+        web.post('/api/run', handle_run_verification),
     ])
     return app
+
+async def handle_websocket(request: web.Request):
+    ws = web.WebSocketResponse()
+    await ws.prepare(request)
+
+    request.app["websockets"].add(ws)
+
+    try:
+        async for msg in ws:
+            pass  # We ignore incoming messages for now, just sending updates
+    finally:
+        request.app["websockets"].discard(ws)
+
+    return ws
+
+async def handle_run_verification(request: web.Request) -> web.Response:
+    runner_factory = request.app.get("runner_factory")
+    if not runner_factory:
+        return web.json_response({"error": "Verification runner not configured"}, status=501)
+
+    # Run in background
+    asyncio.create_task(_run_background_verification(request.app, runner_factory))
+    return web.json_response({"status": "started"})
+
+async def _run_background_verification(app, runner_factory):
+    try:
+        await app["broadcast"]({"type": "status", "message": "Starting verification..."})
+
+        # runner_factory should return (runner, loaded_secrets, version)
+        runner, loaded_secrets, version = await runner_factory()
+
+        await runner.run(loaded_secrets, version, event_callback=app["broadcast"])
+
+        await app["broadcast"]({"type": "status", "message": "Verification complete."})
+    except Exception as e:
+        logging.error(f"Background verification failed: {e}")
+        await app["broadcast"]({"type": "error", "message": str(e)})
 
 async def handle_index(request: web.Request) -> web.Response:
     html = """
@@ -39,11 +90,17 @@ async def handle_index(request: web.Request) -> web.Response:
         pre { background: #f4f4f4; padding: 15px; border-radius: 5px; overflow-x: auto; }
         .error { color: red; }
         .warning { color: orange; }
+        #live-status { margin-bottom: 20px; padding: 10px; border: 1px solid #ccc; background: #eef; display: none; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Vault Check Dashboard</h1>
+        <button onclick="triggerRun()" style="padding: 10px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; margin-bottom: 20px;">Run Verification Now</button>
+        <div id="live-status">
+            <h3>Live Verification</h3>
+            <div id="live-log"></div>
+        </div>
         <div id="report-list">
             <p>Loading reports...</p>
         </div>
@@ -55,6 +112,54 @@ async def handle_index(request: web.Request) -> web.Response:
     </div>
 
     <script>
+        let ws;
+
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+
+            ws.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                handleLiveUpdate(data);
+            };
+
+            ws.onclose = function() {
+                // Try to reconnect in 5 seconds
+                setTimeout(connectWebSocket, 5000);
+            };
+        }
+
+        function handleLiveUpdate(data) {
+            const liveStatus = document.getElementById('live-status');
+            const liveLog = document.getElementById('live-log');
+            liveStatus.style.display = 'block';
+
+            if (data.type === 'check_start') {
+                 liveLog.innerHTML += `<div>Running: ${data.check}...</div>`;
+            } else if (data.type === 'check_complete') {
+                 liveLog.innerHTML += `<div>Finished: ${data.check} (${data.status})</div>`;
+            } else if (data.type === 'status') {
+                 liveLog.innerHTML += `<div><b>${data.message}</b></div>`;
+            } else if (data.type === 'error') {
+                 liveLog.innerHTML += `<div class="error"><b>Error: ${data.message}</b></div>`;
+            }
+        }
+
+        async function triggerRun() {
+            try {
+                const response = await fetch('/api/run', { method: 'POST' });
+                const data = await response.json();
+                if (data.error) {
+                    alert('Error: ' + data.error);
+                } else {
+                    document.getElementById('live-log').innerHTML = ''; // Clear previous logs
+                    alert('Verification started!');
+                }
+            } catch (e) {
+                alert('Failed to trigger verification');
+            }
+        }
+
         async function fetchReports() {
             try {
                 const response = await fetch('/api/reports');
@@ -122,13 +227,13 @@ async def handle_index(request: web.Request) -> web.Response:
         }
 
         fetchReports();
+        connectWebSocket();
     </script>
 </body>
 </html>
     """
     return web.Response(text=html, content_type='text/html')
 
-import asyncio
 
 async def handle_list_reports(request: web.Request) -> web.Response:
     reports_dir = request.app["reports_dir"]
