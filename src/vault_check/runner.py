@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Any, Dict, List, Tuple
+from typing import Any, Callable, Dict, List, Tuple, Optional
 
 from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
 
@@ -21,7 +21,11 @@ class ExecutionEngine:
     def __init__(self, concurrency: int):
         self.concurrency = concurrency
 
-    async def execute(self, registry: VerifierRegistry) -> Tuple[List[str], List[str]]:
+    async def execute(
+        self,
+        registry: VerifierRegistry,
+        event_callback: Optional[Callable[[Dict[str, Any]], Any]] = None,
+    ) -> Tuple[List[str], List[str]]:
         loop = asyncio.get_running_loop()
         semaphore = asyncio.Semaphore(self.concurrency)
         check_tasks: List[asyncio.Task] = []
@@ -31,7 +35,12 @@ class ExecutionEngine:
             async with semaphore:
                 if shutdown_mgr.is_shutting_down():
                     raise asyncio.CancelledError
+
+                if event_callback:
+                    await event_callback({"type": "check_start", "check": check["name"]})
+
                 errors, warnings = [], []
+                status = "OK"
                 try:
                     await check["callable"](*check["args"], **check["kwargs"])
                     progress.update(task_id, completed=100)
@@ -41,10 +50,12 @@ class ExecutionEngine:
                     )
                 except Exception as e:
                     msg = f"{check['name']} failed: {e}"
+                    status = "FAILED"
                     progress.update(
                         task_id, description=f"[red]{check['name']} (Failed)[/red]"
                     )
                     if check["is_warn_only"]:
+                        status = "WARNING"
                         warnings.append(msg)
                         logging.warning(
                             f"Verification check finished: {check['name']} - WARNING - {msg}",
@@ -64,6 +75,16 @@ class ExecutionEngine:
                                 "reason": msg,
                             },
                         )
+
+                if event_callback:
+                    await event_callback({
+                        "type": "check_complete",
+                        "check": check["name"],
+                        "status": status,
+                        "errors": errors,
+                        "warnings": warnings
+                    })
+
                 return errors, warnings
 
         with Progress(
@@ -121,7 +142,12 @@ class Runner:
         self.reporter = ReportManager(output_json, email_alert)
         self.execution_engine = ExecutionEngine(concurrency)
 
-    async def run(self, loaded_secrets: Dict[str, Any], version: str) -> int:
+    async def run(
+        self,
+        loaded_secrets: Dict[str, Any],
+        version: str,
+        event_callback: Optional[Callable[[Dict[str, Any]], Any]] = None,
+    ) -> int:
         bootstrap = VerifierBootstrap(
             http_client=self.http,
             db_timeout=self.db_timeout,
@@ -132,7 +158,7 @@ class Runner:
         )
         registry = bootstrap.bootstrap(loaded_secrets)
 
-        errors, warnings = await self.execution_engine.execute(registry)
+        errors, warnings = await self.execution_engine.execute(registry, event_callback)
 
         # Check if execution was stopped/cancelled which usually returns just one error "Execution stopped"
         if len(errors) == 1 and errors[0].startswith("Execution stopped"):
