@@ -30,8 +30,8 @@ This document outlines the strategic direction for `vault-check`, from core esse
 ### Phase 2: The Standard (Q2)
 **Focus**: Feature parity with top competitors, user experience improvements, and robust error handling.
 
-- [ ] **Official Plugin System**: Allow users to create and share their own verifiers.
-  - [ ] Implement a registration system for custom verifier plugins.
+- [x] **Official Plugin System**: Allow users to create and share their own verifiers.
+  - [x] Implement a registration system for custom verifier plugins.
   - [ ] Publish a developer guide for creating plugins.
 - [ ] **Web UI Dashboard**: Visualize verification results.
   - [ ] A simple web-based dashboard to view the latest and historical verification reports.

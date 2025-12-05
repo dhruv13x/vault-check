@@ -230,8 +230,39 @@ Core flow: `cli.py` parses args -> `secrets.py` loads secrets -> `runner.py` exe
 - [x] Core verifier suite (DB, Redis, JWT, Telegram)
 - [x] Multi-source secret fetching (Doppler, AWS)
 - [x] Concurrency and timeouts
-- [ ] Plugin system for custom verifiers
+- [x] Plugin system for custom verifiers
 - [ ] Web UI for results dashboard
+
+## 🔌 Plugins
+
+`vault-check` supports external plugins to add custom verifiers. Plugins are discovered via the `vault_check.plugins` entry point group.
+
+A plugin must expose a function (the entry point) that accepts a `VerifierRegistry` instance.
+
+**Example Plugin:**
+
+```python
+# my_plugin.py
+from vault_check.registry import VerifierRegistry
+
+def register_verifiers(registry: VerifierRegistry) -> None:
+    registry.add(
+        name="My Custom Check",
+        callable=my_check_function,
+        args=["some_arg"],
+    )
+
+def my_check_function(arg):
+    if arg != "expected":
+        raise ValueError("Check failed")
+```
+
+**pyproject.toml configuration:**
+
+```toml
+[project.entry-points."vault_check.plugins"]
+my_plugin = "my_plugin:register_verifiers"
+```
 
 ## 🤝 Contributing & Extending
 
