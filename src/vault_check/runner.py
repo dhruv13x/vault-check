@@ -3,264 +3,25 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
-from dataclasses import asdict
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
-from rich.console import Console
 from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
 
-from .config import Summary, SECRET_KEYS # Added SECRET_KEYS
-from .output import print_summary, send_email_alert
 from .registry import VerifierRegistry
-from .plugins import load_plugins
 from .signals import install_signal_handlers
-from .heuristics import HeuristicsEngine # Added HeuristicsEngine
-from .verifiers import (
-#    AccountsAPIVerifier,
-    DatabaseVerifier,
-    GoogleOAuthVerifier,
-    JWTExpirationVerifier,
-    JWTSecretVerifier,
-    RazorpayVerifier,
-    RedisVerifier,
-    SessionKeyVerifier,
-    TelegramAPIVerifier,
-    TelegramBotVerifier,
-    TelegramIDVerifier,
-    TelegramSessionVerifier,
-    WebhookVerifier,
-    S3Verifier, # Added S3Verifier
-    SMTPVerifier, # Added SMTPVerifier
-)
+from .bootstrap import VerifierBootstrap
+from .reporting import ReportManager
 
 
-class Runner:
-    def __init__(
-        self,
-        http_client: Any,
-        concurrency: int,
-        db_timeout: float,
-        retries: int,
-        dry_run: bool,
-        skip_live: bool,
-        output_json: str | None,
-        email_alert: List[str] | None,
-        verifiers: List[str] | None,
-    ):
-        self.http = http_client
+class ExecutionEngine:
+    """
+    Responsible for executing the verifiers concurrently.
+    """
+    def __init__(self, concurrency: int):
         self.concurrency = concurrency
-        self.db_timeout = db_timeout
-        self.retries = retries
-        self.dry_run = dry_run
-        self.skip_live = skip_live
-        self.output_json = output_json
-        self.email_alert = email_alert
-        self.verifiers = verifiers
 
-    async def run(self, loaded_secrets: Dict[str, Any], version: str) -> int:
-        registry = VerifierRegistry()
-
-        # Load external plugins
-        load_plugins(registry)
-
-        if not self.verifiers or "database" in self.verifiers:
-            db_verifier = DatabaseVerifier(self.db_timeout, retries=self.retries)
-            for db_key, db_name in [
-                ("CORE_PLATFORM_DB_URL", "Core Platform DB"),
-                ("HEAVY_WORKER_DB_URL", "Heavy Worker DB"),
-                ("GENERAL_PRODUCT_DB_URL", "General Product DB"),
-            ]:
-                if db_url := loaded_secrets.get(db_key):
-                    registry.add(
-                        db_name,
-                        db_verifier.verify,
-                        args=[db_name, db_url],
-                        kwargs={"dry_run": self.dry_run, "skip_live": self.skip_live},
-                    )
-
-        if not self.verifiers or "redis" in self.verifiers:
-            redis_verifier = RedisVerifier()
-            for redis_key, redis_name in [
-                ("CORE_PLATFORM_REDIS_URL", "Core Platform Redis"),
-                ("HEAVY_WORKER_REDIS_URL", "Heavy Worker Redis"),
-                ("GENERAL_PRODUCT_REDIS_URL", "General Product Redis"),
-            ]:
-                if redis_url := loaded_secrets.get(redis_key):
-                    registry.add(
-                        redis_name,
-                        redis_verifier.verify,
-                        args=[redis_name, redis_url],
-                        kwargs={"dry_run": self.dry_run, "skip_live": self.skip_live},
-                    )
-
-        if not self.verifiers or "session" in self.verifiers:
-            session_verifier = SessionKeyVerifier()
-            registry.add(
-                "Session Encryption Key",
-                session_verifier.verify,
-                args=[loaded_secrets.get("SESSION_ENCRYPTION_KEY")],
-                kwargs={"dry_run": self.dry_run, "skip_live": self.skip_live},
-            )
-
-        if not self.verifiers or "jwt" in self.verifiers:
-            jwt_verifier = JWTSecretVerifier()
-            registry.add(
-                "JWT Secret", jwt_verifier.verify, args=[loaded_secrets.get("JWT_SECRET")]
-            )
-
-            jwt_exp_verifier = JWTExpirationVerifier()
-            registry.add(
-                "JWT Expiration",
-                jwt_exp_verifier.verify,
-                args=[loaded_secrets.get("JWT_EXPIRATION_MINUTES")],
-            )
-
-        if not self.verifiers or "telegram" in self.verifiers:
-            tg_api_verifier = TelegramAPIVerifier()
-            registry.add(
-                "Telegram API ID",
-                tg_api_verifier.verify_api_id,
-                args=[loaded_secrets.get("API_ID")],
-            )
-            registry.add(
-                "Telegram API Hash",
-                tg_api_verifier.verify_api_hash,
-                args=[loaded_secrets.get("API_HASH")],
-            )
-
-            tg_id_verifier = TelegramIDVerifier()
-            registry.add(
-                "Owner Telegram ID",
-                tg_id_verifier.verify_owner_id,
-                args=[loaded_secrets.get("OWNER_TELEGRAM_ID")],
-            )
-            registry.add(
-                "Admin User IDs",
-                tg_id_verifier.verify_admin_ids,
-                args=[loaded_secrets.get("ADMIN_USER_IDS")],
-                is_warn_only=True,
-            )
-
-            tg_session_verifier = TelegramSessionVerifier()
-            if session_str := loaded_secrets.get("OWNER_SESSION_STRING"):
-                registry.add(
-                    "Owner Session String",
-                    tg_session_verifier.verify,
-                    args=[session_str],
-                )
-
-            tg_bot_verifier = TelegramBotVerifier(self.http)
-            for bot_key, bot_name in [
-                ("FORWARDER_BOT_TOKEN", "Forwarder Bot Token"),
-                ("AUTH_BOT_TOKEN", "Auth Bot Token"),
-                ("ADMIN_BOT_TOKEN", "Admin Bot Token"),
-            ]:
-                if token := loaded_secrets.get(bot_key):
-                    registry.add(
-                        bot_name,
-                        tg_bot_verifier.verify_bot_token,
-                        args=[bot_name, token],
-                        kwargs={"dry_run": self.dry_run, "skip_live": self.skip_live},
-                    )
-
-#        if not self.verifiers or "accounts" in self.verifiers:
-#            accounts_verifier = AccountsAPIVerifier(self.http)
-#            registry.add(
-#                "Accounts API",
-#                accounts_verifier.verify,
-#                args=[
-#                    loaded_secrets.get("ACCOUNTS_API_KEY"),
-#                    loaded_secrets.get("ACCOUNTS_API_URL"),
-#                ],
-#                kwargs={"dry_run": self.dry_run, "skip_live": self.skip_live},
-#            )
-
-        if not self.verifiers or "webhook" in self.verifiers:
-            webhook_verifier = WebhookVerifier()
-            registry.add(
-                "Webhook Settings",
-                webhook_verifier.verify,
-                args=[
-                    loaded_secrets.get("BASE_WEBHOOK_URL"),
-                    loaded_secrets.get("WEBHOOK_SECRET_TOKEN"),
-                ],
-            )
-
-        if not self.verifiers or "razorpay" in self.verifiers:
-            razorpay_verifier = RazorpayVerifier(self.http)
-            registry.add(
-                "Razorpay",
-                razorpay_verifier.verify,
-                args=[
-                    loaded_secrets.get("RAZORPAY_KEY_ID"),
-                    loaded_secrets.get("RAZORPAY_KEY_SECRET"),
-                    loaded_secrets.get("RAZORPAY_WEBHOOK_SECRET"),
-                ],
-                kwargs={"dry_run": self.dry_run, "skip_live": self.skip_live},
-                is_warn_only=True,
-            )
-
-        if not self.verifiers or "google" in self.verifiers:
-            google_verifier = GoogleOAuthVerifier(self.http)
-            registry.add(
-                "Google OAuth",
-                google_verifier.verify,
-                args=[
-                    loaded_secrets.get("GOOGLE_CLIENT_ID"),
-                    loaded_secrets.get("GOOGLE_CLIENT_SECRET"),
-                ],
-                kwargs={"dry_run": self.dry_run, "skip_live": self.skip_live},
-                is_warn_only=True,
-            )
-
-        # Auto-Discovery
-        if not self.verifiers or "auto" in self.verifiers:
-            processed_keys = set(SECRET_KEYS.keys())
-            for key, value in loaded_secrets.items():
-                if key in processed_keys:
-                    continue
-
-                verifier_cls = HeuristicsEngine.match(value)
-                if verifier_cls:
-                    kwargs = {"dry_run": self.dry_run, "skip_live": self.skip_live}
-                    args = []
-
-                    if issubclass(verifier_cls, DatabaseVerifier):
-                        verifier = verifier_cls(self.db_timeout, retries=self.retries)
-                        name = f"{key} (Auto)"
-                        args = [name, value]
-                    elif issubclass(verifier_cls, RedisVerifier):
-                        verifier = verifier_cls()
-                        name = f"{key} (Auto)"
-                        args = [name, value]
-                    elif issubclass(verifier_cls, S3Verifier):
-                        verifier = verifier_cls()
-                        name = f"{key} (Auto)"
-                        # S3Verifier.verify(bucket_name, ...)
-                        # value is the s3:// url
-                        args = [value]
-                    elif issubclass(verifier_cls, SMTPVerifier):
-                        verifier = verifier_cls()
-                        name = f"{key} (Auto)"
-                        # SMTPVerifier.verify(host, ...)
-                        args = [value]
-                    else:
-                        try:
-                            verifier = verifier_cls()
-                            name = f"{key} (Auto)"
-                        except TypeError:
-                            logging.warning(f"Could not instantiate auto-discovered verifier for {key}")
-                            continue
-                    
-                    registry.add(
-                        name,
-                        verifier.verify,
-                        args=args,
-                        kwargs=kwargs,
-                    )
-
+    async def execute(self, registry: VerifierRegistry) -> Tuple[List[str], List[str]]:
         loop = asyncio.get_running_loop()
         semaphore = asyncio.Semaphore(self.concurrency)
         check_tasks: List[asyncio.Task] = []
@@ -321,7 +82,8 @@ class Runner:
                 results = await asyncio.gather(*check_tasks, return_exceptions=True)
             except (asyncio.TimeoutError, asyncio.CancelledError) as e:
                 logging.error(f"Execution stopped: {e}")
-                return 1
+                # In case of cancellation, we might want to return what we have or just empty
+                return ["Execution stopped"], []
 
         all_errors = []
         all_warnings = []
@@ -333,14 +95,47 @@ class Runner:
                 all_errors.extend(errors)
                 all_warnings.extend(warnings)
 
-        status = "FAILED" if all_errors else "PASSED"
-        summary = Summary(version, all_errors, all_warnings, status)
+        return all_errors, all_warnings
 
-        print_summary(summary, "text", Console())
-        if self.output_json:
-            with open(self.output_json, "w") as f:
-                json.dump(asdict(summary), f, indent=2)
-        if self.email_alert and status == "FAILED":
-            send_email_alert(summary, *self.email_alert)
 
-        return 2 if all_errors else 0
+class Runner:
+    def __init__(
+        self,
+        http_client: Any,
+        concurrency: int,
+        db_timeout: float,
+        retries: int,
+        dry_run: bool,
+        skip_live: bool,
+        output_json: str | None,
+        email_alert: List[str] | None,
+        verifiers: List[str] | None,
+    ):
+        self.http = http_client
+        self.db_timeout = db_timeout
+        self.retries = retries
+        self.dry_run = dry_run
+        self.skip_live = skip_live
+        self.verifiers = verifiers
+
+        self.reporter = ReportManager(output_json, email_alert)
+        self.execution_engine = ExecutionEngine(concurrency)
+
+    async def run(self, loaded_secrets: Dict[str, Any], version: str) -> int:
+        bootstrap = VerifierBootstrap(
+            http_client=self.http,
+            db_timeout=self.db_timeout,
+            retries=self.retries,
+            dry_run=self.dry_run,
+            skip_live=self.skip_live,
+            selected_verifiers=self.verifiers,
+        )
+        registry = bootstrap.bootstrap(loaded_secrets)
+
+        errors, warnings = await self.execution_engine.execute(registry)
+
+        # Check if execution was stopped/cancelled which usually returns just one error "Execution stopped"
+        if len(errors) == 1 and errors[0].startswith("Execution stopped"):
+             return 1
+
+        return self.reporter.generate_report(version, errors, warnings)
