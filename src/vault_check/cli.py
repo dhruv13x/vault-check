@@ -23,7 +23,7 @@ from .config import (
     DEFAULT_RETRIES,
 )
 from .http_client import HTTPClient
-from .logging import setup_logging
+from .logger import setup_logging
 from .runner import Runner
 from .secrets import load_secrets
 from .banner import print_logo
@@ -58,6 +58,9 @@ async def main(argv: List[str]) -> int:
     )
     parser.add_argument("--version", action="store_true")
     parser.add_argument("--verifiers", nargs="+", help="A list of verifiers to run")
+    parser.add_argument("--dashboard", action="store_true", help="Start the web dashboard")
+    parser.add_argument("--dashboard-port", type=int, default=8000, help="Port for the dashboard")
+    parser.add_argument("--reports-dir", default=".", help="Directory to load reports from for the dashboard")
     parser.add_argument(
         "project_path",
         nargs="?",
@@ -67,6 +70,23 @@ async def main(argv: List[str]) -> int:
 
     if args.version:
         print(__version__)
+        return 0
+
+    if args.dashboard:
+        from .dashboard import create_dashboard_app
+        print(f"Starting dashboard on http://localhost:{args.dashboard_port}")
+        print(f"Serving reports from: {os.path.abspath(args.reports_dir)}")
+        web_app = create_dashboard_app(args.reports_dir)
+        runner = aiohttp.web.AppRunner(web_app)
+        await runner.setup()
+        site = aiohttp.web.TCPSite(runner, 'localhost', args.dashboard_port)
+        await site.start()
+        # Keep the event loop running
+        try:
+            while True:
+                await asyncio.sleep(3600)
+        except asyncio.CancelledError:
+            await runner.cleanup()
         return 0
 
     setup_logging(

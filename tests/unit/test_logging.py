@@ -5,10 +5,10 @@ import logging
 import sys
 from unittest.mock import MagicMock, patch
 
-from vault_check.logging import JsonFormatter, setup_logging
+from vault_check.logger import JsonFormatter, setup_logging
 
 
-@patch("vault_check.logging.RichHandler")
+@patch("vault_check.logger.RichHandler")
 @patch("logging.basicConfig")
 def test_setup_logging_text(mock_basic_config, mock_rich_handler):
     """Verify text logging setup."""
