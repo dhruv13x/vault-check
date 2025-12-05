@@ -1,6 +1,6 @@
 # src/vault_check/config.py
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
@@ -58,3 +58,4 @@ class Summary:
     errors: List[str]
     warnings: List[str]
     status: str
+    suggestions: List[str] = field(default_factory=list)

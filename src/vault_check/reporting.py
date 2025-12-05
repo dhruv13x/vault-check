@@ -19,9 +19,9 @@ class ReportManager:
         self.output_json = output_json
         self.email_alert = email_alert
 
-    def generate_report(self, version: str, errors: List[str], warnings: List[str]) -> int:
+    def generate_report(self, version: str, errors: List[str], warnings: List[str], suggestions: List[str] = None) -> int:
         status = "FAILED" if errors else "PASSED"
-        summary = Summary(version, errors, warnings, status)
+        summary = Summary(version, errors, warnings, status, suggestions or [])
 
         self._print_to_console(summary)
         self._save_to_json(summary)

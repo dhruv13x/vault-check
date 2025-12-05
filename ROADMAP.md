@@ -36,7 +36,7 @@ This document outlines the strategic direction for `vault-check`, categorizing f
 - [x] **Real-time Dashboard Updates**: Implement WebSockets for live verification progress on the dashboard.
 - [ ] **Plugin Developer Guide**: Documentation and examples for creating and publishing custom verifiers.
 - [ ] **Enhanced Reporting**:
-  - [ ] Actionable fix suggestions (e.g., "Your Fernet key is weak, generate a new one with `openssl...`").
+  - [x] Actionable fix suggestions (e.g., "Your Fernet key is weak, generate a new one with `openssl...`").
   - [ ] Historical trend analysis to track stability over time.
 - [ ] **Expanded Secret Backends**:
   - [ ] HashiCorp Vault

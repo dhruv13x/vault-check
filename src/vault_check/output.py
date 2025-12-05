@@ -32,8 +32,12 @@ def print_summary(summary: Summary, fmt: str, console: Console) -> None:
         table.add_row("Warnings", "\n".join(summary.warnings))
     if summary.errors:
         table.add_row("Errors", "\n".join(summary.errors))
-    else:
-        table.add_row("Errors", "None ✅")
+    if summary.suggestions:
+        table.add_row("Suggestions", "\n".join(summary.suggestions))
+    if not summary.errors and not summary.warnings and not summary.suggestions:
+        table.add_row("Checks", "All Passed ✅")
+    elif not summary.errors:
+         table.add_row("Errors", "None ✅")
 
     console.print(table)
 
