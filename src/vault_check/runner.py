@@ -14,6 +14,7 @@ from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
 from .config import Summary, SECRET_KEYS # Added SECRET_KEYS
 from .output import print_summary, send_email_alert
 from .registry import VerifierRegistry
+from .plugins import load_plugins
 from .signals import install_signal_handlers
 from .heuristics import HeuristicsEngine # Added HeuristicsEngine
 from .verifiers import (
@@ -60,6 +61,9 @@ class Runner:
 
     async def run(self, loaded_secrets: Dict[str, Any], version: str) -> int:
         registry = VerifierRegistry()
+
+        # Load external plugins
+        load_plugins(registry)
 
         if not self.verifiers or "database" in self.verifiers:
             db_verifier = DatabaseVerifier(self.db_timeout, retries=self.retries)
