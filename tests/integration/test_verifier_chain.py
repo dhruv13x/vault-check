@@ -42,7 +42,7 @@ async def test_secret_sourcing_fallback(mock_get_json):
 
 
 @pytest.mark.asyncio
-@patch("vault_check.runner.print_summary")
+@patch("vault_check.reporting.print_summary")
 async def test_cli_flow(mock_print_summary):
     """Verify the full CLI flow, from argument parsing to summary output."""
     return_code = await main(

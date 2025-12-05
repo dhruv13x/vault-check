@@ -26,9 +26,12 @@ async def test_runner_orchestration():
     )
 
     loaded_secrets = {"CORE_PLATFORM_DB_URL": "test_db_url"}
-    with patch("vault_check.runner.VerifierRegistry") as mock_registry:
-        mock_registry_instance = MagicMock()
-        mock_registry_instance.checks = [
+
+    # We now mock VerifierBootstrap instead of VerifierRegistry directly in the Runner
+    with patch("vault_check.runner.VerifierBootstrap") as mock_bootstrap_cls:
+        mock_bootstrap = MagicMock()
+        mock_registry = MagicMock()
+        mock_registry.checks = [
             {
                 "name": "Test Check",
                 "callable": AsyncMock(),
@@ -37,11 +40,12 @@ async def test_runner_orchestration():
                 "is_warn_only": False,
             }
         ]
-        mock_registry.return_value = mock_registry_instance
+        mock_bootstrap.bootstrap.return_value = mock_registry
+        mock_bootstrap_cls.return_value = mock_bootstrap
 
         exit_code = await runner.run(loaded_secrets, "1.0.0")
         assert exit_code == 0
-        mock_registry_instance.add.assert_called()
+        mock_bootstrap.bootstrap.assert_called_with(loaded_secrets)
 
 
 @pytest.mark.asyncio
@@ -63,9 +67,10 @@ async def test_runner_handles_failures():
     failing_check = AsyncMock(side_effect=ValueError("Test Failure"))
     loaded_secrets = {"CORE_PLATFORM_DB_URL": "test_db_url"}
 
-    with patch("vault_check.runner.VerifierRegistry") as mock_registry:
-        mock_registry_instance = MagicMock()
-        mock_registry_instance.checks = [
+    with patch("vault_check.runner.VerifierBootstrap") as mock_bootstrap_cls:
+        mock_bootstrap = MagicMock()
+        mock_registry = MagicMock()
+        mock_registry.checks = [
             {
                 "name": "Failing Check",
                 "callable": failing_check,
@@ -74,7 +79,8 @@ async def test_runner_handles_failures():
                 "is_warn_only": False,
             }
         ]
-        mock_registry.return_value = mock_registry_instance
+        mock_bootstrap.bootstrap.return_value = mock_registry
+        mock_bootstrap_cls.return_value = mock_bootstrap
 
         exit_code = await runner.run(loaded_secrets, "1.0.0")
         assert exit_code == 2

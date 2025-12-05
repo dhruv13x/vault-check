@@ -8,7 +8,7 @@ from vault_check.cli import main
 
 
 @pytest.mark.asyncio
-@patch("vault_check.runner.send_email_alert")
+@patch("vault_check.reporting.send_email_alert")
 async def test_cli_integration_dry_run(mock_send_email_alert):
     return_code = await main(
         ["--env-file", "tests/integration/test.env", "--dry-run"]
