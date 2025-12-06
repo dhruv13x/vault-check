@@ -74,7 +74,7 @@ vault-check --dashboard --dashboard-port 8080 --output-json ./reports/latest.jso
 
 ## ✨ Key Features
 
-- **Multi-Source Loading**: Seamlessly fetch secrets from `.env`, **Doppler**, or **AWS SSM**.
+- **Multi-Source Loading**: Seamlessly fetch secrets from `.env`, **Doppler**, **AWS SSM**, or **HashiCorp Vault**.
 - **Comprehensive Verifiers**: Out-of-the-box checks for Database URLs, Redis, JWT secrets, Telegram Bots, Razorpay, Google OAuth, and more.
 - **God Level Security Checks**:
   - **Entropy Analysis**: Uses `zxcvbn` to ensure your keys aren't weak (e.g., "password123").
@@ -112,6 +112,8 @@ Vault Check looks for a `.env` file by default (or fetching from Doppler/AWS). T
 | `--doppler-project` | `string` | `bot-platform` | Doppler Project Name. |
 | `--doppler-config` | `string` | `dev_bot-platform` | Doppler Config Name. |
 | `--aws-ssm-prefix` | `string` | `None` | AWS SSM parameter prefix to load secrets from. |
+| `--vault-addr` | `env var` | `None` | HashiCorp Vault Address (via `VAULT_ADDR`). |
+| `--vault-token` | `env var` | `None` | HashiCorp Vault Token (via `VAULT_TOKEN`). |
 | `--log-level` | `choice` | `INFO` | Logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`). |
 | `--log-format` | `choice` | `text` | Log format (`text`, `json`). |
 | `--color` | `bool` | `False` | Enable colorized output. |
