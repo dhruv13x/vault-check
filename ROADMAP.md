@@ -37,9 +37,9 @@ This document outlines the strategic direction for `vault-check`, categorizing f
 - [ ] **Plugin Developer Guide**: Documentation and examples for creating and publishing custom verifiers.
 - [ ] **Enhanced Reporting**:
   - [x] Actionable fix suggestions (e.g., "Your Fernet key is weak, generate a new one with `openssl...`").
-  - [ ] Historical trend analysis to track stability over time.
+  - [x] Historical trend analysis to track stability over time.
 - [ ] **Expanded Secret Backends**:
-  - [ ] HashiCorp Vault
+  - [x] HashiCorp Vault
   - [ ] Google Secret Manager
   - [ ] Azure Key Vault
 

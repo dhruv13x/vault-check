@@ -7,6 +7,7 @@ import os
 from typing import Any, Dict
 
 import boto3
+import hvac  # type: ignore
 
 from .config import SECRET_KEYS
 from .http_client import HTTPClient
@@ -24,6 +25,8 @@ async def load_secrets(
 ) -> Dict[str, Any]:
     secrets: Dict[str, Any] = {}
     doppler_token = os.getenv("DOPPLER_TOKEN")
+    vault_addr = os.getenv("VAULT_ADDR")
+    vault_token = os.getenv("VAULT_TOKEN")
     aws_ssm_client = None
 
     if aws_ssm_prefix:
@@ -33,7 +36,29 @@ async def load_secrets(
         except Exception as e:
             logging.warning(f"AWS SSM init failed: {e}; falling back")
 
-    if doppler_token and not dry_run:
+    if vault_addr and vault_token and not dry_run:
+        try:
+            client = hvac.Client(url=vault_addr, token=vault_token)
+            if client.is_authenticated():
+                user_path = os.getenv("VAULT_PATH", "secret/data/app")
+
+                # Simplified approach: We expect VAULT_PATH to be the path relative to the mount point (often "secret")
+                # but many users might provide "secret/data/app".
+                # We strip "secret/data/" or "secret/" to get the path for read_secret_version
+                # which usually expects path relative to mount.
+
+                # clear "secret/data/"
+                secret_path = user_path.replace("secret/data/", "").replace("secret/", "")
+
+                read_response = client.secrets.kv.v2.read_secret_version(path=secret_path)
+                secrets = read_response["data"]["data"]
+                logging.info(f"HashiCorp Vault secrets fetched (count={len(secrets)})")
+            else:
+                logging.warning("HashiCorp Vault authentication failed")
+        except Exception as e:
+            logging.warning(f"HashiCorp Vault fetch failed: {e}; falling back")
+
+    elif doppler_token and not dry_run:
         token_source = "env var" if initial_doppler_token else ".env file"
         doppler_url = f"https://api.doppler.com/v3/configs/config/secrets?project={doppler_project}&config={doppler_config}"
         try:
