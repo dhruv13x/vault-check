@@ -12,6 +12,7 @@ from .registry import VerifierRegistry
 from .signals import install_signal_handlers
 from .bootstrap import VerifierBootstrap
 from .reporting import ReportManager
+from .exceptions import VerificationError
 
 
 class ExecutionEngine:
@@ -25,7 +26,7 @@ class ExecutionEngine:
         self,
         registry: VerifierRegistry,
         event_callback: Optional[Callable[[Dict[str, Any]], Any]] = None,
-    ) -> Tuple[List[str], List[str]]:
+    ) -> Tuple[List[str], List[str], List[str]]:
         loop = asyncio.get_running_loop()
         semaphore = asyncio.Semaphore(self.concurrency)
         check_tasks: List[asyncio.Task] = []
@@ -39,7 +40,7 @@ class ExecutionEngine:
                 if event_callback:
                     await event_callback({"type": "check_start", "check": check["name"]})
 
-                errors, warnings = [], []
+                errors, warnings, suggestions = [], [], []
                 status = "OK"
                 try:
                     await check["callable"](*check["args"], **check["kwargs"])
@@ -49,7 +50,14 @@ class ExecutionEngine:
                         extra={"check_name": check["name"], "status": "OK"},
                     )
                 except Exception as e:
-                    msg = f"{check['name']} failed: {e}"
+                    # Handle VerificationError specially to extract suggestions
+                    if isinstance(e, VerificationError) and e.fix_suggestion:
+                        suggestions.append(f"Suggestion for {check['name']}: {e.fix_suggestion}")
+
+                    # For VerificationError, use e.message, otherwise str(e)
+                    error_msg = e.message if isinstance(e, VerificationError) else str(e)
+                    msg = f"{check['name']} failed: {error_msg}"
+
                     status = "FAILED"
                     progress.update(
                         task_id, description=f"[red]{check['name']} (Failed)[/red]"
@@ -82,10 +90,11 @@ class ExecutionEngine:
                         "check": check["name"],
                         "status": status,
                         "errors": errors,
-                        "warnings": warnings
+                        "warnings": warnings,
+                        "suggestions": suggestions
                     })
 
-                return errors, warnings
+                return errors, warnings, suggestions
 
         with Progress(
             SpinnerColumn(),
@@ -104,19 +113,21 @@ class ExecutionEngine:
             except (asyncio.TimeoutError, asyncio.CancelledError) as e:
                 logging.error(f"Execution stopped: {e}")
                 # In case of cancellation, we might want to return what we have or just empty
-                return ["Execution stopped"], []
+                return ["Execution stopped"], [], []
 
         all_errors = []
         all_warnings = []
+        all_suggestions = []
         for result in results:
             if isinstance(result, Exception):
                 all_errors.append(str(result))
             else:
-                errors, warnings = result
+                errors, warnings, suggestions = result
                 all_errors.extend(errors)
                 all_warnings.extend(warnings)
+                all_suggestions.extend(suggestions)
 
-        return all_errors, all_warnings
+        return all_errors, all_warnings, all_suggestions
 
 
 class Runner:
@@ -158,10 +169,10 @@ class Runner:
         )
         registry = bootstrap.bootstrap(loaded_secrets)
 
-        errors, warnings = await self.execution_engine.execute(registry, event_callback)
+        errors, warnings, suggestions = await self.execution_engine.execute(registry, event_callback)
 
         # Check if execution was stopped/cancelled which usually returns just one error "Execution stopped"
         if len(errors) == 1 and errors[0].startswith("Execution stopped"):
              return 1
 
-        return self.reporter.generate_report(version, errors, warnings)
+        return self.reporter.generate_report(version, errors, warnings, suggestions)
