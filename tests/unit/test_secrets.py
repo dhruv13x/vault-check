@@ -27,7 +27,7 @@ async def test_load_secrets_from_doppler():
         "secrets": {"CORE_PLATFORM_DB_URL": "doppler_value"}
     }
     with patch("os.getenv") as mock_getenv:
-        mock_getenv.return_value = "doppler_token"
+        mock_getenv.side_effect = lambda key: "doppler_token" if key == "DOPPLER_TOKEN" else None
         secrets = await load_secrets(http_client)
         assert secrets["CORE_PLATFORM_DB_URL"] == "doppler_value"
 
