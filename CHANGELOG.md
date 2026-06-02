@@ -1,5 +1,9 @@
 # Changelog
 
+## [8.0.0] - 2026-06-02
+### Other Changes
+- update
+
 ## [7.0.0] - 2025-12-19
 ### Documentation
 - overhaul README to Gold Standard V3 (#18)
